@@ -1,32 +1,39 @@
-import React, { useState, useRef } from 'react'
+import React, { useRef, useState } from 'react'
 import { Button } from '@mui/material'
 
 interface FlasherProps {
-  bootloaderFile: File | null;
-  partitionTableFile: File | null;
-  firmwareFile: File | null;
+  bootloaderFile: Blob | null;
+  partitionTableFile: Blob | null;
+  firmwareFile: Blob | null;
+  spiffsFile: Blob | null;
 }
 
 const Flasher: React.FC<FlasherProps> = ({
     bootloaderFile,
     partitionTableFile,
     firmwareFile,
+    spiffsFile
 }) => {
+
+    const [progress, setProgress] = useState(0)
+    const [isReady, setIsReady] = useState(false)
 
     const espStubRef = useRef<any>(undefined)
 
     const bootloaderOffset = '0x1000'
     const partitionsOffset = '0x8000'
     const firmwareOffset = '0x10000'
+    const spiffsOffset = '0x310000'
 
     const offsets = [
         bootloaderOffset,
         partitionsOffset,
-        firmwareOffset
+        firmwareOffset,
+        spiffsOffset
     ]
 
     // Replace `firmware` with an array of the passed file props
-    const firmware = [bootloaderFile, partitionTableFile, firmwareFile]
+    const firmware = [bootloaderFile, partitionTableFile, firmwareFile, spiffsFile]
 
     const sleep = (ms: number) => {
         return new Promise((resolve) => setTimeout(resolve, ms))
@@ -41,7 +48,7 @@ const Flasher: React.FC<FlasherProps> = ({
     const getValidFiles = () => {
         const validFiles: number[] = []
         const offsetVals: number[] = []
-        for (let i = 0; i < 3; i++) {
+        for (let i = 0; i < offsets.length; i++) {
             const offs = parseInt(offsets[i], 16)
             if (firmware[i] && !offsetVals.includes(offs)) {
                 validFiles.push(i)
@@ -114,13 +121,14 @@ const Flasher: React.FC<FlasherProps> = ({
             await espStubRef.current.disconnect()
 
             console.log('Flashing completed.')
+            setIsReady(true)
         } catch (error) {
             console.error(error)
         }
     }
 
     const clickProgram = async () => {
-        const readUploadedFileAsArrayBuffer = (inputFile: File) => {
+        const readUploadedFileAsArrayBuffer = (inputFile: Blob) => {
             const reader = new FileReader()
 
             return new Promise<ArrayBuffer>((resolve, reject) => {
@@ -148,6 +156,7 @@ const Flasher: React.FC<FlasherProps> = ({
                 await espStubRef.current.flashData(
                     contents,
                     (bytesWritten: number, totalBytes: number) => {
+                        setProgress(Math.floor((bytesWritten / totalBytes) * 100))
                         console.log(Math.floor((bytesWritten / totalBytes) * 100) + '%')
                     },
                     offset
@@ -165,6 +174,8 @@ const Flasher: React.FC<FlasherProps> = ({
             <Button variant="contained" onClick={handleConnectButtonClick}>
                 Connect and Flash
             </Button>
+            <h2>{ progress } %</h2>
+            <h2>{ isReady ? 'READY' : '' } </h2>
         </div>
     )
 }
