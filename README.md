@@ -1,6 +1,10 @@
 # LoRaChat - Device Firmware Upgrade (LRC DFU)
 Upgrade the firmware version of the LoRa Chat node using WebUSB
 
+## Production live version
+
+The LoRa Chat Device Firmware Update Tool can be found from <a href="https://firmware.rantakangas.com/" target="_blank">firmware.rantakangas.com</a>
+
 
 ## Acknowledgments
 
