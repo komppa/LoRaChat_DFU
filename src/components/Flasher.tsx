@@ -1,22 +1,32 @@
-import React, { useRef, useState } from 'react'
-import { Button } from '@mui/material'
+import React, { useEffect, useRef } from 'react'
+
 
 interface FlasherProps {
-  bootloaderFile: Blob | null;
-  partitionTableFile: Blob | null;
-  firmwareFile: Blob | null;
-  spiffsFile: Blob | null;
+    bootloaderFile: Blob | null
+    partitionTableFile: Blob | null
+    firmwareFile: Blob | null
+    spiffsFile: Blob | null
+    setProgress: (progress: number) => void
+    setIsReady: (isReady: boolean) => void
+    setPhase: (phase: string) => void
+    connectAndFlash: boolean
 }
 
 const Flasher: React.FC<FlasherProps> = ({
     bootloaderFile,
     partitionTableFile,
     firmwareFile,
-    spiffsFile
+    spiffsFile,
+    setProgress,
+    setIsReady,
+    setPhase,
+    connectAndFlash,
 }) => {
 
-    const [progress, setProgress] = useState(0)
-    const [isReady, setIsReady] = useState(false)
+    // Track when we should start flashing
+    useEffect(() => {
+        handleConnectButtonClick()
+    }, [connectAndFlash])
 
     const espStubRef = useRef<any>(undefined)
 
@@ -94,10 +104,12 @@ const Flasher: React.FC<FlasherProps> = ({
             await esploader.initialize()
 
             console.log('Connected to ' + esploader.chipName)
+            setPhase('Connected to ' + esploader.chipName)
             console.log('MAC Address: ' + formatMacAddr(esploader.macAddr()))
 
             espStubRef.current = await esploader.runStub()
             espStubRef.current.addEventListener('disconnect', () => {
+                setPhase('Board disconnected')
                 espStubRef.current = false
             })
         } catch (err) {
@@ -105,6 +117,7 @@ const Flasher: React.FC<FlasherProps> = ({
             throw err
         }
 
+        setPhase('Erasing the flash of the board')
         console.log('Erasing the flash of the board')
 
         await clickErase()
@@ -148,6 +161,17 @@ const Flasher: React.FC<FlasherProps> = ({
         let i = -1
         for (const file of getValidFiles()) {
             i = i + 1
+
+            if (i === 0) {
+                setPhase('Uploading bootloader... (1/4)')
+            } else if (i === 1) {
+                setPhase('Uploading partition table... (2/4)')
+            } else if (i === 2) {
+                setPhase('Uploading firmware... (3/4)')
+            } else if (i === 3) {
+                setPhase('Uploading UI... (4/4)')
+            }
+            
             const binfile = firmware[file]
             if (!binfile) continue
             const contents = await readUploadedFileAsArrayBuffer(binfile)
@@ -169,15 +193,7 @@ const Flasher: React.FC<FlasherProps> = ({
         console.log('To run the new firmware, please reset your device.')
     }
 
-    return (
-        <div>
-            <Button variant="contained" onClick={handleConnectButtonClick}>
-                Connect and Flash
-            </Button>
-            <h2>{ progress } %</h2>
-            <h2>{ isReady ? 'READY' : '' } </h2>
-        </div>
-    )
+    return (<></>)
 }
 
 export default Flasher
