@@ -1,12 +1,22 @@
 import React, { useEffect, useState } from 'react'
-import { Box, Container, Typography, Link, Button } from '@mui/material'
+import { Box, Container, Typography, Link, Button, decomposeColor } from '@mui/material'
 import LinearProgress from '@mui/material/LinearProgress'
 import Flasher from '../components/Flasher'
 import JSZip from 'jszip'
 import moment from 'moment'
 
 
-const ProgressView = () => {
+interface ProgressViewProps {
+    setWebSerial: (webSerial: WebSerial) => void
+}
+
+export interface WebSerial {
+    write: (data: string) => Promise<void>
+    read: () => Promise<string>
+}
+
+
+const ProgressView: React.FC<ProgressViewProps> = ({ setWebSerial }) => {
 
     const [flash, setFlash] = useState(false)
     const [completed, setCompleted] = useState(false)
@@ -19,6 +29,113 @@ const ProgressView = () => {
     const [partitionTableFile, setPartitionTableFile] = useState<null | Blob>(null)
     const [firmwareFile, setFirmwareFile] = useState<null | Blob>(null)
     const [spiffsFile, setSpiffsFile] = useState<null | Blob>(null)
+
+
+    class WebSerialReader {
+        private reader: ReadableStreamDefaultReader<Uint8Array> | null = null
+        private lineBuffer: Uint8Array = new Uint8Array()
+      
+        constructor(private port: any) {}
+        
+        async startReading() {
+            if (this.port.readable) {
+                this.reader = this.port.readable.getReader()
+                await this.readLoop()
+            } else {
+                console.error('Port is not readable')
+            }
+        }
+        
+        async stopReading() {
+            if (this.reader) {
+                await this.reader.cancel()
+                this.reader.releaseLock()
+                this.reader = null
+            }
+        }
+        
+        async write(data: string) {
+            if (this.port.writable) {
+                const writer = this.port.writable.getWriter()
+                try {
+                    const encoder = new TextEncoder()
+                    const dataArray = encoder.encode(data)
+                    await writer.write(dataArray)
+                } finally {
+                    writer.releaseLock()
+                }
+            } else {
+                console.error('Port is not writable')
+            }
+        }
+        
+        private async readLoop() {
+            while (this.reader) {
+                const { value, done } = await this.reader.read()
+                if (done) {
+                    break
+                }
+      
+                this.processData(value)
+            }
+        }
+        
+        private processData(data: Uint8Array) {
+            let position = 0
+            while (position < data.length) {
+                const lineBreakIndex = data.indexOf(0x0A, position)
+                if (lineBreakIndex === -1) {
+                    this.lineBuffer = this.concatUint8Arrays(this.lineBuffer, data.slice(position))
+                    break
+                }
+
+      
+                const line = this.concatUint8Arrays(this.lineBuffer, data.slice(position, lineBreakIndex))
+                this.lineBuffer = new Uint8Array()
+      
+                if (line.length > 0 && line[line.length - 1] === 0x0D) {
+                    this.handleLine(line.slice(0, line.length - 1))
+                } else {
+                    this.handleLine(line)
+                }
+      
+                position = lineBreakIndex + 1
+            }
+        }
+        
+        private concatUint8Arrays(a: Uint8Array, b: Uint8Array): Uint8Array {
+            const result = new Uint8Array(a.length + b.length)
+            result.set(a, 0)
+            result.set(b, a.length)
+            return result
+        }
+        
+        private handleLine(line: Uint8Array) {
+            const textDecoder = new TextDecoder()
+            const textLine = textDecoder.decode(line)
+            console.log('Received line:', textLine)
+        }
+    }
+      
+    async function setupWebSerial() {
+        const port = await (navigator as any).serial.requestPort()
+        await port.open({ baudRate: 115200 })
+      
+        const reader = new WebSerialReader(port)
+        
+        setTimeout(async () => {
+
+            reader.write('REBOOT')
+
+            setTimeout(async () => {
+                reader.write('NOT_MY_CAT')
+                reader.startReading()
+            }, 1000)
+
+        }, 500)
+
+
+    }
 
 
     useEffect(() => {
@@ -63,7 +180,7 @@ const ProgressView = () => {
             }
         }
 
-        fetchAndUnzip()
+        // fetchAndUnzip()
     }, [])
 
     useEffect(() => {
@@ -116,7 +233,7 @@ const ProgressView = () => {
                 </Typography>
 
 
-                <Flasher
+                {/* <Flasher
                     bootloaderFile={bootloaderFile}
                     partitionTableFile={partitionTableFile}
                     firmwareFile={firmwareFile}
@@ -127,17 +244,23 @@ const ProgressView = () => {
                     setPhase={(p: string) => setPhase(p)}
 
                     connectAndFlash={flash} 
-                />
+                /> */}
 
                 {
                     (!flash && !completed) && (
                         <Box sx={{ display: 'flex', justifyContent: 'center' }}>
-                            <Button variant="contained" onClick={() => {
+
+                            <Button variant="contained" sx={{ mr: 2 }} onClick={() => {
                                 setFlash(true)
                                 setCompleted(false)
                             }}>
                                 Connect and Flash!
                             </Button>
+
+                            <Button variant="contained" onClick={() => setupWebSerial()}>
+                                Set parameters
+                            </Button>
+
                         </Box>
                     )
                 }

@@ -121,17 +121,23 @@ const Flasher: React.FC<FlasherProps> = ({
         console.log('Erasing the flash of the board')
 
         await clickErase()
+
+        return esploader
     }
 
     const handleConnectButtonClick = async () => {
         try {
             // Connect to the board
-            await clickConnect()
+            const esp = await clickConnect()
 
             // Flash the files
-            await clickProgram()
+            await clickProgram(esp)
             // Disconnect from the board
-            await espStubRef.current.disconnect()
+            try {
+                await espStubRef.current.disconnect()
+            } catch (error) {
+                console.error('Could not disconnect gracefully', error)
+            }
 
             console.log('Flashing completed.')
             setIsReady(true)
@@ -140,7 +146,7 @@ const Flasher: React.FC<FlasherProps> = ({
         }
     }
 
-    const clickProgram = async () => {
+    const clickProgram = async (esp: any) => {
         const readUploadedFileAsArrayBuffer = (inputFile: Blob) => {
             const reader = new FileReader()
 
@@ -190,7 +196,8 @@ const Flasher: React.FC<FlasherProps> = ({
                 console.error(e)
             }
         }
-        console.log('To run the new firmware, please reset your device.')
+        console.log('Resetting board...')
+        await esp.hardReset(true)
     }
 
     return (<></>)
