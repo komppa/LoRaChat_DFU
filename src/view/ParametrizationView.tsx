@@ -17,7 +17,7 @@ import {
 import { SelectChangeEvent } from '@mui/material/Select'
 
 
-interface Parameter {
+export interface Parameter {
     type: 'boolean' | 'string'
     key: string
     value: string

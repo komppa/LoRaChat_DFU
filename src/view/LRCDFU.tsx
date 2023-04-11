@@ -4,10 +4,12 @@ import LinearProgress from '@mui/material/LinearProgress'
 import Flasher from '../components/Flasher'
 import JSZip from 'jszip'
 import moment from 'moment'
+import { Parameter } from './ParametrizationView'
 
 
 interface ProgressViewProps {
-    setWebSerial: (webSerial: WebSerial) => void
+    setWebSerial: (webSerialPort: any) => void
+    setCurrentParameters: (currentParameters: Parameter[]) => void
 }
 
 export interface WebSerial {
@@ -16,7 +18,7 @@ export interface WebSerial {
 }
 
 
-const ProgressView: React.FC<ProgressViewProps> = ({ setWebSerial }) => {
+const LRCDFU: React.FC<ProgressViewProps> = ({ setCurrentParameters, setWebSerial }) => {
 
     const [flash, setFlash] = useState(false)
     const [completed, setCompleted] = useState(false)
@@ -35,7 +37,9 @@ const ProgressView: React.FC<ProgressViewProps> = ({ setWebSerial }) => {
         private reader: ReadableStreamDefaultReader<Uint8Array> | null = null
         private lineBuffer: Uint8Array = new Uint8Array()
       
-        constructor(private port: any) {}
+        constructor(private port: any) {
+            setWebSerial(port)
+        }
         
         async startReading() {
             if (this.port.readable) {
@@ -113,7 +117,16 @@ const ProgressView: React.FC<ProgressViewProps> = ({ setWebSerial }) => {
         private handleLine(line: Uint8Array) {
             const textDecoder = new TextDecoder()
             const textLine = textDecoder.decode(line)
-            console.log('Received line:', textLine)
+            // If this textLine can be parsed as JSON and it has a element of array with "type" property, it's a message from the device
+            try {
+                const parsedLine = JSON.parse(textLine)
+                if (Array.isArray(parsedLine) && parsedLine.length > 0 && (parsedLine[0].type == 'string' || parsedLine[0].type == 'boolean')) {
+                    setCurrentParameters(parsedLine)
+                }
+            } catch (error) {
+                // Do nothing
+            }
+            
         }
     }
       
@@ -311,4 +324,4 @@ const ProgressView: React.FC<ProgressViewProps> = ({ setWebSerial }) => {
     )
 }
 
-export default ProgressView
+export default LRCDFU

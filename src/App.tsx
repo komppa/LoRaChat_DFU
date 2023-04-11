@@ -1,8 +1,7 @@
 import React, { useState, useEffect } from 'react'
 import IsNotChrome from './view/IsNotChrome'
 import LRCDFU, { WebSerial } from './view/LRCDFU'
-import ParametrizationView from './view/ParametrizationView'
-
+import ParametrizationView, { Parameter } from './view/ParametrizationView'
 
 
 
@@ -10,7 +9,9 @@ const App = () => {
 
     const [isChrome, setIsChrome] = useState(true)
     const [showParametrizationView, setShowParametrizationView] = useState(true)
-    const [webSerial, setWebSerial] = useState<WebSerial | null>(null)
+    const [webSerial, setWebSerial] = useState<any | null>(null)
+
+    const [currentParameters, setCurrentParameters] = useState<Parameter[]>([])
 
     useEffect(() => {
         setIsChrome(!!window.chrome)
@@ -26,20 +27,17 @@ const App = () => {
                         ?
                         // <ParametrizationView webSerial={webSerial} />
                         <ParametrizationView
-                            parameters={[
-                                { type: 'string', key: 'SSID', value: 'my_default_ssid' },
-                                { type: 'string', key: 'PASSWORD', value: 'my_default_pasword' },
-                                { type: 'boolean', key: 'WIFI_MODE', value: 'true' },
-                            ]}
+                            parameters={currentParameters}
                         />
                         :
                         <LRCDFU
-                            setWebSerial={(serial: WebSerial) => {
+                            setWebSerial={(serialPort: any) => {
                                 // Tell the serial device
-                                setWebSerial(serial)
+                                setWebSerial(serialPort)
                                 // Show the parametrization view
                                 setShowParametrizationView(true)
                             }}
+                            setCurrentParameters={(data: Parameter[]) => setCurrentParameters(data)}
                         />
                 )
             }
