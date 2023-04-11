@@ -25,15 +25,15 @@ const App = () => {
                 ) : (
                     (showParametrizationView && webSerial)
                         ?
-                        // <ParametrizationView webSerial={webSerial} />
                         <ParametrizationView
                             parameters={currentParameters}
+                            webSerial={webSerial}
                         />
                         :
                         <LRCDFU
-                            setWebSerial={(serialPort: any) => {
+                            setWebSerial={(s: any) => {
                                 // Tell the serial device
-                                setWebSerial(serialPort)
+                                setWebSerial(s)
                                 // Show the parametrization view
                                 setShowParametrizationView(true)
                             }}

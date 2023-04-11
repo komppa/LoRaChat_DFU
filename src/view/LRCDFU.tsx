@@ -38,7 +38,7 @@ const LRCDFU: React.FC<ProgressViewProps> = ({ setCurrentParameters, setWebSeria
         private lineBuffer: Uint8Array = new Uint8Array()
       
         constructor(private port: any) {
-            setWebSerial(port)
+
         }
         
         async startReading() {
@@ -135,11 +135,10 @@ const LRCDFU: React.FC<ProgressViewProps> = ({ setCurrentParameters, setWebSeria
         await port.open({ baudRate: 115200 })
       
         const reader = new WebSerialReader(port)
+        setWebSerial(reader)
         
         setTimeout(async () => {
-
             reader.write('REBOOT')
-
             setTimeout(async () => {
                 reader.write('NOT_MY_CAT')
                 reader.startReading()
@@ -193,7 +192,7 @@ const LRCDFU: React.FC<ProgressViewProps> = ({ setCurrentParameters, setWebSeria
             }
         }
 
-        // fetchAndUnzip()
+        fetchAndUnzip()
     }, [])
 
     useEffect(() => {
@@ -246,7 +245,7 @@ const LRCDFU: React.FC<ProgressViewProps> = ({ setCurrentParameters, setWebSeria
                 </Typography>
 
 
-                {/* <Flasher
+                <Flasher
                     bootloaderFile={bootloaderFile}
                     partitionTableFile={partitionTableFile}
                     firmwareFile={firmwareFile}
@@ -257,15 +256,17 @@ const LRCDFU: React.FC<ProgressViewProps> = ({ setCurrentParameters, setWebSeria
                     setPhase={(p: string) => setPhase(p)}
 
                     connectAndFlash={flash} 
-                /> */}
+                />
 
                 {
                     (!flash && !completed) && (
                         <Box sx={{ display: 'flex', justifyContent: 'center' }}>
 
                             <Button variant="contained" sx={{ mr: 2 }} onClick={() => {
-                                setFlash(true)
-                                setCompleted(false)
+                                if (bootloaderFile && partitionTableFile && firmwareFile && spiffsFile) {
+                                    setFlash(true)
+                                    setCompleted(false)
+                                }
                             }}>
                                 Connect and Flash!
                             </Button>

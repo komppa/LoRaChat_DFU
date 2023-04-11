@@ -1,4 +1,4 @@
-import React, { useState } from 'react'
+import React, { useState, useEffect } from 'react'
 import {
     Box,
     Container,
@@ -24,20 +24,20 @@ export interface Parameter {
 }
 
 interface ParameterRowProps {
-    index: number
+    paramKey: string
     param: Parameter
-    onValueChange: (index: number, value: string) => void
+    onValueChange: (key: string, value: string) => void
 }
 
 
-const ParameterRow: React.FC<ParameterRowProps> = ({ index, param, onValueChange }) => {
+const ParameterRow: React.FC<ParameterRowProps> = ({ paramKey, param, onValueChange }) => {
 
     const [value, setValue] = useState(param.value)
   
     const handleValueChange = (event: SelectChangeEvent<string>) => {
         const newValue = event.target.value
         setValue(newValue)
-        onValueChange(index, newValue)
+        onValueChange(paramKey, newValue)
     }
     
   
@@ -59,7 +59,10 @@ const ParameterRow: React.FC<ParameterRowProps> = ({ index, param, onValueChange
                 ) : (
                     <TextField
                         defaultValue={param.value}
-                        onChange={(event) => setValue(event.target.value)}
+                        onChange={(event) => {
+                            setValue(event.target.value)
+                            onValueChange(paramKey, event.target.value)
+                        }}
                         InputProps={{
                             readOnly: false,
                         }}
@@ -77,22 +80,27 @@ const ParameterRow: React.FC<ParameterRowProps> = ({ index, param, onValueChange
 
 interface ParametrizationViewProps {
     parameters: Parameter[]
+    webSerial: any
 }
 
 
-const ParametrizationView: React.FC<ParametrizationViewProps> = ({ parameters }) => {
+const ParametrizationView: React.FC<ParametrizationViewProps> = ({ parameters, webSerial }) => {
 
     const [rows, setRows] = useState(parameters)
+
+    useEffect(() => {
+        setRows(parameters)
+    }, [parameters])
 
     const handleUpload = () => {
         const data = JSON.stringify(rows)
         console.log(data)
+        webSerial.write(data)
+
     }
 
-    const handleValueChange = (index: number, value: string) => {
-        const updatedRows = [...rows]
-        updatedRows[index].value = value
-        setRows(updatedRows)
+    const handleValueChange = (paramKey: string, value: string) => {
+        setRows(rows.map((row: Parameter) => row.key === paramKey ? { ...row, value } : row))
     }
 
 
@@ -115,7 +123,7 @@ const ParametrizationView: React.FC<ParametrizationViewProps> = ({ parameters })
                         <TableBody>
                             {
                                 parameters.map((param, index) => (
-                                    <ParameterRow key={index} index={index} param={param} onValueChange={handleValueChange} />
+                                    <ParameterRow key={index} paramKey={param.key} param={param} onValueChange={handleValueChange} />
                                 ))
                             }
                         </TableBody>
