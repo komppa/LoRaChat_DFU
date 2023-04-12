@@ -32,6 +32,26 @@ const LRCDFU: React.FC<ProgressViewProps> = ({ setCurrentParameters, setWebSeria
     const [firmwareFile, setFirmwareFile] = useState<null | Blob>(null)
     const [spiffsFile, setSpiffsFile] = useState<null | Blob>(null)
 
+    let intervalHandler: any | null = null
+
+
+    const handleCurrentParameters = (data: string) => {
+        console.log('Received:', data)
+        // If this data can be parsed as JSON and it has a element of array with "type" property, it's a message from the device
+        try {
+            const parsedLine = JSON.parse(data)
+            if (Array.isArray(parsedLine) && parsedLine.length > 0 && (parsedLine[0].type == 'string' || parsedLine[0].type == 'boolean')) {
+                console.log('Received current parameters from device!')
+                // Send current params to parametrizaion view
+                setCurrentParameters(parsedLine)
+                // We can stop the hammering the magic word to device
+                clearInterval(intervalHandler)
+            }
+        } catch (error) {
+            // Do nothing
+        }
+    }
+
 
     class WebSerialReader {
         private reader: ReadableStreamDefaultReader<Uint8Array> | null = null
@@ -117,16 +137,8 @@ const LRCDFU: React.FC<ProgressViewProps> = ({ setCurrentParameters, setWebSeria
         private handleLine(line: Uint8Array) {
             const textDecoder = new TextDecoder()
             const textLine = textDecoder.decode(line)
-            // If this textLine can be parsed as JSON and it has a element of array with "type" property, it's a message from the device
-            try {
-                const parsedLine = JSON.parse(textLine)
-                if (Array.isArray(parsedLine) && parsedLine.length > 0 && (parsedLine[0].type == 'string' || parsedLine[0].type == 'boolean')) {
-                    setCurrentParameters(parsedLine)
-                }
-            } catch (error) {
-                // Do nothing
-            }
-            
+            // Check whether the received data is parameters from the device
+            handleCurrentParameters(textLine)            
         }
     }
       
@@ -138,10 +150,14 @@ const LRCDFU: React.FC<ProgressViewProps> = ({ setCurrentParameters, setWebSeria
         setWebSerial(reader)
         
         setTimeout(async () => {
-            reader.write('REBOOT')
-            setTimeout(async () => {
+            // Since we are here, we assume that we have user to tell to press the reset button on the device
+            // that the device could check if the parametrization should be activated. Hammer magic string in so long
+            // that the device enters the parametrization mode
+            reader.startReading()
+            
+            intervalHandler = setInterval(() => {
+                console.log('Sending magic string')
                 reader.write('NOT_MY_CAT')
-                reader.startReading()
             }, 1000)
 
         }, 500)

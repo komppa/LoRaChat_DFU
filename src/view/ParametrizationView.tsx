@@ -114,27 +114,40 @@ const ParametrizationView: React.FC<ParametrizationViewProps> = ({ parameters, w
                 justifyContent: 'center',
             }}
         >
-            <Container maxWidth="md">
-                <Typography variant="h4" component="h1" gutterBottom align="center" mb={4}>
-                    Parametrization of LoRa Chat node
-                </Typography>
-                <TableContainer component={Paper}>
-                    <Table>
-                        <TableBody>
-                            {
-                                parameters.map((param, index) => (
-                                    <ParameterRow key={index} paramKey={param.key} param={param} onValueChange={handleValueChange} />
-                                ))
-                            }
-                        </TableBody>
-                    </Table>
-                </TableContainer>
-                <Box sx={{ display: 'flex', justifyContent: 'center', marginTop: 3 }}>
-                    <Button variant="contained" onClick={handleUpload}>
-                        Save new parameters
-                    </Button>
-                </Box>
-            </Container>
+            {
+                rows.length === 0 ? (
+                    <Typography variant="h4" component="h1" gutterBottom align="center" mb={4}>
+                        Press reset button of the device to enter parametrization mode
+                    </Typography>
+                ) : (
+                    <Container maxWidth="md">
+                        <Typography variant="h4" component="h1" gutterBottom align="center" mb={4}>
+                            Parametrization of LoRa Chat node
+                        </Typography>
+                        <TableContainer component={Paper}>
+                            <Table>
+                                <TableBody>
+                                    {
+                                        parameters.map((param, index) => (
+                                            <ParameterRow key={index} paramKey={param.key} param={param} onValueChange={handleValueChange} />
+                                        ))
+                                    }
+                                </TableBody>
+                            </Table>
+                        </TableContainer>
+                        <Box sx={{ display: 'flex', justifyContent: 'center', marginTop: 3 }}>
+                            <Button variant="contained" onClick={handleUpload}>
+                                Save new parameters
+                            </Button>
+                        </Box>
+                        <Box sx={{ display: 'flex', justifyContent: 'center', marginTop: 3 }}>
+                            <Typography variant="h6" component="p" gutterBottom align="center" mb={4}>
+                                After pressing save button, press reset button of the device to apply new parameters and refresh this page to go back to the main view.
+                            </Typography>
+                        </Box>
+                    </Container>
+                )
+            }
         </Box>
     )
 
